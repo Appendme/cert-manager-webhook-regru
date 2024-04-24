@@ -1,13 +1,53 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "example-webhook.fullname" . }}
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cert-manager-webhook-regru.name" . }}
+    chart: {{ include "cert-manager-webhook-regru.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+---
+# Grant permissions to read secrets inside the cluster to allow to have issuer in another namespace than the webhook
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}:secrets-reader
+  labels:
+    app: {{ include "cert-manager-webhook-regru.name" . }}
+    chart: {{ include "cert-manager-webhook-regru.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - '*'
+    verbs:
+      - 'get'
+      - 'list'
+      - 'watch'
+---
+# Bind the previously created role to the webhook service account to allow reading from secrets in all namespaces
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}:secrets-reader
+  labels:
+    app: {{ include "cert-manager-webhook-regru.name" . }}
+    chart: {{ include "cert-manager-webhook-regru.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}:secrets-reader
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: {{ include "cert-manager-webhook-regru.fullname" . }}
+    namespace: {{ .Release.Namespace }}
 ---
 # Grant the webhook permission to read the ConfigMap containing the Kubernetes
 # apiserver's requestheader-ca-certificate.
@@ -15,11 +55,11 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:webhook-authentication-reader
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}:webhook-authentication-reader
   namespace: kube-system
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cert-manager-webhook-regru.name" . }}
+    chart: {{ include "cert-manager-webhook-regru.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 roleRef:
@@ -29,7 +69,7 @@ roleRef:
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
-    name: {{ include "example-webhook.fullname" . }}
+    name: {{ include "cert-manager-webhook-regru.fullname" . }}
     namespace: {{ .Release.Namespace }}
 ---
 # apiserver gets the auth-delegator role to delegate auth decisions to
@@ -37,10 +77,10 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:auth-delegator
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}:auth-delegator
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cert-manager-webhook-regru.name" . }}
+    chart: {{ include "cert-manager-webhook-regru.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 roleRef:
@@ -50,17 +90,17 @@ roleRef:
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
-    name: {{ include "example-webhook.fullname" . }}
+    name: {{ include "cert-manager-webhook-regru.fullname" . }}
     namespace: {{ .Release.Namespace }}
 ---
 # Grant cert-manager permission to validate using our apiserver
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:domain-solver
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}:domain-solver
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cert-manager-webhook-regru.name" . }}
+    chart: {{ include "cert-manager-webhook-regru.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 rules:
@@ -74,16 +114,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "example-webhook.fullname" . }}:domain-solver
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}:domain-solver
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "cert-manager-webhook-regru.name" . }}
+    chart: {{ include "cert-manager-webhook-regru.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "example-webhook.fullname" . }}:domain-solver
+  name: {{ include "cert-manager-webhook-regru.fullname" . }}:domain-solver
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
