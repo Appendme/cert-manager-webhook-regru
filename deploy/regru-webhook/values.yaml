@@ -17,7 +17,7 @@ certManager:
   serviceAccountName: cert-manager
 
 image:
-  repository: ghcr.io/appendme/cluster-issuer-regru:latest
+  repository: ghcr.io/appendme/cluster-issuer-regru
   tag: latest
   pullPolicy: IfNotPresent
 
