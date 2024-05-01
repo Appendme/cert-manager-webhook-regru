@@ -78,11 +78,12 @@ func (c *regruDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 
 	cfg, err := loadConfig(ch.Config)
 	if err != nil {
+		klog.Infof("Present error")
 		return err
 	}
 
 	// TODO: do something more useful with the decoded configuration
-	fmt.Printf("Decoded configuration %v", cfg)
+	klog.Infof("Decoded configuration %v", cfg)
 
 	// TODO: add code that sets a record in the DNS provider's console
 	return nil
@@ -115,6 +116,7 @@ func (c *regruDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopC
 
 	cl, err := kubernetes.NewForConfig(kubeClientConfig)
 	if err != nil {
+		klog.Infof("Initialize error")
 		return err
 	}
 
