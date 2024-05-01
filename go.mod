@@ -6,8 +6,8 @@ require (
 	github.com/cert-manager/cert-manager v1.12.6
 	github.com/miekg/dns v1.1.50
 	github.com/stretchr/testify v1.8.4
-	k8s.io/apiextensions-apiserver v0.27.2
 	k8s.io/client-go v0.27.2
+	k8s.io/klog/v2 v2.100.1
 )
 
 require (
@@ -96,10 +96,10 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.27.2 // indirect
+	k8s.io/apiextensions-apiserver v0.27.2 // indirect
 	k8s.io/apimachinery v0.27.2 // indirect
 	k8s.io/apiserver v0.27.2 // indirect
 	k8s.io/component-base v0.27.2 // indirect
-	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kms v0.27.2 // indirect
 	k8s.io/kube-aggregator v0.27.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20230515203736-54b630e78af5 // indirect

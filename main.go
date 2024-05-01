@@ -1,12 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -15,7 +12,11 @@ import (
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
 )
 
-var GroupName = os.Getenv("GROUP_NAME")
+var (
+	GroupName     = os.Getenv("GROUP_NAME")
+	regruUsername = os.Getenv("REGRU_USERNAME")
+	regruPassword = os.Getenv("REGRU_PASSWORD")
+)
 
 func main() {
 	if GroupName == "" {
@@ -40,24 +41,6 @@ type regruDNSProviderSolver struct {
 	client *kubernetes.Clientset
 }
 
-// regruDNSProviderConfig is a structure that is used to decode into when
-// solving a DNS01 challenge.
-// This information is provided by cert-manager, and may be a reference to
-// additional configuration that's needed to solve the challenge for this
-// particular certificate or issuer.
-// This typically includes references to Secret resources containing DNS
-// provider credentials, in cases where a 'multi-tenant' DNS solver is being
-// created.
-// If you do *not* require per-issuer or per-certificate configuration to be
-// provided to your webhook, you can skip decoding altogether in favour of
-// using CLI flags or similar to provide configuration.
-// You should not include sensitive information here. If credentials need to
-// be used by your provider here, you should reference a Kubernetes Secret
-// resource and fetch these credentials using a Kubernetes clientset.
-type regruDNSProviderConfig struct {
-	RegruAPIPasswordSecretRef cmmeta.SecretKeySelector `json:"regruPasswordSecretRef"`
-}
-
 // Name is used as the name for this DNS solver when referencing it on the ACME
 // Issuer resource.
 // This should be unique **within the group name**, i.e. you can have two
@@ -74,16 +57,19 @@ func (c *regruDNSProviderSolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (c *regruDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	klog.Infof("Call function Present: namespace=%s, zone=%s, fqdn=%s", ch.ResourceNamespace, ch.ResolvedZone, ch.ResolvedFQDN)
+	klog.Infof("Hook Present: namespace=%s, zone=%s, fqdn=%s, key=%s", ch.ResourceNamespace, ch.ResolvedZone, ch.ResolvedFQDN, ch.Key)
 
-	cfg, err := loadConfig(ch.Config)
+	zone, err := getDomainFromZone(ch.ResolvedZone, ch.ResolvedFQDN)
 	if err != nil {
-		klog.Infof("Present error")
-		return err
+		return fmt.Errorf("unable to initialize reg.ru client, because unable to get root zone from domains: %w", err)
 	}
 
-	// TODO: do something more useful with the decoded configuration
-	klog.Infof("Decoded configuration %v", cfg)
+	client := NewRegruClient(regruUsername, regruPassword, zone)
+
+	klog.Infof("present for entry=%s, domain=%s, key=%s", ch.ResolvedFQDN, zone, ch.Key)
+	if err := client.createTXT(ch.ResolvedFQDN, ch.Key); err != nil {
+		return fmt.Errorf("unable to create TXT record: %v", err)
+	}
 
 	// TODO: add code that sets a record in the DNS provider's console
 	return nil
@@ -97,6 +83,19 @@ func (c *regruDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // concurrently.
 func (c *regruDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	klog.Infof("Call function CleanUp: namespace=%s, zone=%s, fqdn=%s", ch.ResourceNamespace, ch.ResolvedZone, ch.ResolvedFQDN)
+
+	zone, err := getDomainFromZone(ch.ResolvedZone, ch.ResolvedFQDN)
+	if err != nil {
+		return fmt.Errorf("unable to initialize reg.ru client, because unable to get root zone from domains: %w", err)
+	}
+
+	client := NewRegruClient(regruUsername, regruPassword, zone)
+
+	klog.Infof("delete entry=%s, domain=%s, key=%s", ch.ResolvedFQDN, zone, ch.Key)
+
+	if err := client.deleteTXT(ch.ResolvedFQDN, ch.Key); err != nil {
+		return fmt.Errorf("unable to delete TXT record: %v", err)
+	}
 
 	// TODO: add code that deletes a record from the DNS provider's console
 	return nil
@@ -123,21 +122,4 @@ func (c *regruDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopC
 	c.client = cl
 
 	return nil
-}
-
-// loadConfig is a small helper function that decodes JSON configuration into
-// the typed config struct.
-func loadConfig(cfgJSON *extapi.JSON) (regruDNSProviderConfig, error) {
-	klog.Infof("Call function loadConfig")
-
-	cfg := regruDNSProviderConfig{}
-	// handle the 'base case' where no configuration has been provided
-	if cfgJSON == nil {
-		return cfg, nil
-	}
-	if err := json.Unmarshal(cfgJSON.Raw, &cfg); err != nil {
-		return cfg, fmt.Errorf("error decoding solver config: %v", err)
-	}
-
-	return cfg, nil
 }
