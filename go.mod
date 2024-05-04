@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/cert-manager/cert-manager v1.12.6
 	github.com/miekg/dns v1.1.59
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	k8s.io/client-go v0.27.2
 	k8s.io/klog/v2 v2.100.1
 )
