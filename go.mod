@@ -7,7 +7,7 @@ toolchain go1.22.3
 require (
 	github.com/cert-manager/cert-manager v1.14.5
 	k8s.io/client-go v0.30.0
-	k8s.io/klog/v2 v2.120.1
+	k8s.io/klog/v2 v2.130.1
 )
 
 require (
