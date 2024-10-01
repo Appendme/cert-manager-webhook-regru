@@ -2,7 +2,7 @@ module github.com/appendme/cert-manager-webhook-regru
 
 go 1.22.0
 
-toolchain go1.22.3
+toolchain go1.23.2
 
 require (
 	github.com/cert-manager/cert-manager v1.14.5
